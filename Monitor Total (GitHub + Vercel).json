@@ -1,0 +1,336 @@
+{
+  "name": "Monitor Total (GitHub + Vercel)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "github-push",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        -64
+      ],
+      "id": "f1e33380-8897-4730-8ff4-fb11f6a82e4a",
+      "name": "Webhook",
+      "webhookId": "e5da1f11-2163-4745-90a0-f4b7ba78d169"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.headers['x-github-event'] }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "push"
+            },
+            {
+              "value2": "workflow_run",
+              "output": 1
+            },
+            {
+              "value2": "deployment_status",
+              "output": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        -96
+      ],
+      "id": "8458ada9-45d3-47cb-ad2e-97c1e066de96",
+      "name": "Clasificador de Eventos"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('telegram_chat_id').first().json.chat_id }}",
+        "text": "=🚀 <b>Nuevo Push Recibido</b>\n\n📦 <b>Repo:</b> <a href=\"{{ $json.body.repository.html_url }}\">{{ $json.body.repository.name }}</a>\n🌿 <b>Rama:</b> <code>{{ $json.body.ref.replace('refs/heads/', '') }}</code>\n👤 <b>Autor:</b> {{ $json.body.pusher.name }}\n\n📝 <b>Commit:</b> <code>{{ $json.body.head_commit.id.substring(0, 7) }}</code>\n💬 <b>Mensaje:</b> {{ $json.body.head_commit.message }}\n\n🔗 <a href=\"{{ $json.body.compare }}\"><b>Ver Diferencias (Diff)</b></a>",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        256,
+        -320
+      ],
+      "id": "bfecac8b-41e9-436e-be68-4a282610035b",
+      "name": "Telegram (Push)",
+      "webhookId": "7c631a65-cc34-4c5a-b002-6f2b5a66874b",
+      "credentials": {
+        "telegramApi": {
+          "id": "1wLyXt39S3eiwB3X",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.workflow_run.conclusion }}",
+              "value2": "failure"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        -16
+      ],
+      "id": "54649c21-6579-4eda-8e34-7f4e93db5309",
+      "name": "If (GitHub Falló?)"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('telegram_chat_id').first().json.chat_id }}",
+        "text": "=💀 <b>FALLO CRÍTICO EN GITHUB ACTIONS</b>\n\n📦 <b>Repo:</b> <a href=\"{{ $json.body.repository.html_url }}\">{{ $json.body.repository.name }}</a>\n⚙️ <b>Workflow:</b> <code>{{ $json.body.workflow_run.name }}</code>\n🌿 <b>Rama:</b> <code>{{ $json.body.workflow_run.head_branch }}</code>\n\n🧨 <b>Evento:</b> {{ $json.body.workflow_run.event }}\n❌ <b>Estado:</b> FAILURE\n\n🆘 <a href=\"{{ $json.body.workflow_run.html_url }}\"><b>VER LOGS DEL ERROR</b></a>",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        256,
+        -128
+      ],
+      "id": "27299634-4bed-4a87-a90e-849c52577922",
+      "name": "Aviso Error GitHub",
+      "webhookId": "859ffcad-8eb8-4fcb-a42a-e1be441a37fd",
+      "credentials": {
+        "telegramApi": {
+          "id": "1wLyXt39S3eiwB3X",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.deployment_status.state }}",
+              "value2": "failure"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        0,
+        368
+      ],
+      "id": "ae86c007-0441-4ea5-833c-1223288d256e",
+      "name": "If (Vercel Falló?)"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('telegram_chat_id').first().json.chat_id }}",
+        "text": "=🔥 <b>¡FALLÓ EL DESPLIEGUE!</b>\n\n📂 <b>Repo:</b> <a href=\"{{ $json.body.repository.html_url }}\">{{ $json.body.repository.name }}</a>\n🌿 <b>Rama:</b> <code>{{ $json.body.deployment.ref }}</code>\n🌍 <b>Entorno:</b> {{ $json.body.deployment.environment }}\n\n📜 <b>Detalle:</b>\n<code>{{ $json.body.deployment_status.description }}</code>\n\n🔗 <a href=\"{{ $json.body.deployment_status.target_url }}\"><b>VER LOGS DEL ERROR</b></a>",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        256,
+        256
+      ],
+      "id": "6da0a890-4048-45a3-b825-db17a0f38e82",
+      "name": "Aviso Error Vercel",
+      "webhookId": "053c9a51-c993-4da8-97e8-f5fe84fd6b19",
+      "credentials": {
+        "telegramApi": {
+          "id": "1wLyXt39S3eiwB3X",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "eb53feee-ba1c-48d3-9078-f012401805a9",
+              "name": "chat_id",
+              "value": "-1003155739026",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -608,
+        -64
+      ],
+      "id": "d29757b0-cdd5-497d-8f66-d57850dc7d5f",
+      "name": "telegram_chat_id"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('telegram_chat_id').first().json.chat_id }}",
+        "text": "==🎉 <b>¡DESPLIEGUE EXITOSO!</b>\n\n📂 <b>Repo:</b> <a href=\"{{ $json.body.repository.html_url }}\">{{ $json.body.repository.name }}</a>\n🌿 <b>Rama:</b> <code>{{ $json.body.deployment.meta.githubCommitRef }}</code>\n🌍 <b>Entorno:</b> {{ $json.body.deployment.environment }}\n\n🔗 <b>Link:</b> <code>{{ $json.body.deployment_status.target_url }}</code>\n\n👉 <a href=\"{{ $json.body.deployment_status.target_url }}\"><b>Hacer Clic para Abrir</b></a>",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        256,
+        464
+      ],
+      "id": "4039924a-4884-46bd-ba07-dfcefcaaa71e",
+      "name": "Aviso Éxito Vercel",
+      "webhookId": "053c9a51-c993-4da8-97e8-f5fe84fd6b19",
+      "credentials": {
+        "telegramApi": {
+          "id": "1wLyXt39S3eiwB3X",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('telegram_chat_id').first().json.chat_id }}",
+        "text": "==✅ <b>GITHUB ACTION COMPLETADO</b>\n\n📦 <b>Repo:</b> <a href=\"{{ $json.body.repository.html_url }}\">{{ $json.body.repository.name }}</a>\n⚙️ <b>Workflow:</b> <code>{{ $json.body.workflow_run.name }}</code>\n🌿 <b>Rama:</b> <code>{{ $json.body.workflow_run.head_branch }}</code>\n\n🏁 <b>Conclusión:</b> {{ $json.body.workflow_run.conclusion }}\n⏱️ <b>Duración:</b> {{ ($json.body.workflow_run.updated_at.getTime() - $json.body.workflow_run.run_started_at.getTime()) / 1000 }}s\n\n🔍 <a href=\"{{ $json.body.workflow_run.html_url }}\"><b>VER DETALLES</b></a>",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        256,
+        64
+      ],
+      "id": "4137ed6d-226d-4597-b619-29d6f0ff3039",
+      "name": "Aviso Éxito GitHub",
+      "webhookId": "859ffcad-8eb8-4fcb-a42a-e1be441a37fd",
+      "credentials": {
+        "telegramApi": {
+          "id": "1wLyXt39S3eiwB3X",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "telegram_chat_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clasificador de Eventos": {
+      "main": [
+        [
+          {
+            "node": "Telegram (Push)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If (GitHub Falló?)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If (Vercel Falló?)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If (GitHub Falló?)": {
+      "main": [
+        [
+          {
+            "node": "Aviso Error GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aviso Éxito GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If (Vercel Falló?)": {
+      "main": [
+        [
+          {
+            "node": "Aviso Error Vercel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aviso Éxito Vercel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "telegram_chat_id": {
+      "main": [
+        [
+          {
+            "node": "Clasificador de Eventos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "ecafa584-acaf-4075-8ae2-9d8d1888963a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "74fb2ef3b0b5581b0068fe470b186739275ac906aa2d0dd2fbd3fee51e0d45c6"
+  },
+  "id": "6p8bqYQjDat8R7Ay",
+  "tags": []
+}
