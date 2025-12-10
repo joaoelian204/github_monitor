@@ -11,9 +11,5 @@
       "src": "/(.*)",
       "dest": "github_monitor.py"
     }
-  ],
-  "env": {
-    "TELEGRAM_BOT_TOKEN": "@telegram-bot-token",
-    "TELEGRAM_CHAT_ID": "@telegram-chat-id"
-  }
+  ]
 }
